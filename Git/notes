@@ -1,0 +1,7 @@
+
+Setup git remote push credentials
+
+ec2-user@Ubuntu:~/git-ws/Ansible$ git config credential.helper store
+ec2-user@Ubuntu:~/git-ws/Ansible$ git push https://github.com/niladridatta/Ansible.git
+
++++
