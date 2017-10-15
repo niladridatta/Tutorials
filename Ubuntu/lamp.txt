@@ -1,0 +1,23 @@
+
+sudo apt-get update
+
+sudo apt-get install apache2
+
+sudo /etc/init.d/apache2 restart
+
+sudo systemctl restart apache2
+sudo systemctl status apache2
+
+sudo apt-get install mysql-server
+
+apt-get purge php* -y
+apt-get install libapache2-mod-php -y
+
+sudo service apache2 restart
+
+sudo service apache2 stop
+sudo service apache2 start
+
+php -r 'echo "\n\nYour PHP installation is working fine.\n\n\n";'
+
++++
