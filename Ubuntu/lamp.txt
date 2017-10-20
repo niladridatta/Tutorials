@@ -21,3 +21,45 @@ sudo service apache2 start
 php -r 'echo "\n\nYour PHP installation is working fine.\n\n\n";'
 
 +++
+
+Setup index.php as default page
+
+$ diff /etc/apache2/mods-enabled/dir.conf /etc/apache2/mods-enabled/dir.conf.def
+2c2
+<       DirectoryIndex index.php index.html index.cgi index.pl index.xhtml index.htm
+---
+>       DirectoryIndex index.html index.cgi index.pl index.php index.xhtml index.htm
+
+root@Ubuntu:/var/www/html# cat /var/www/html/index.php
+<?php
+echo "Hello World!";
+?>
+
+
+$ lynx -dump localhost
+   Hello World!
+
++++
+
+root@Ubuntu:/var/www/html# cat /var/www/html/info.php
+<?php
+phpinfo();
+?>
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

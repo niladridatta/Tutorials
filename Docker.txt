@@ -1,0 +1,273 @@
+
+Installation
+---------------
+
+  239  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  241  sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  242  apt-get update
+  243  apt-cache policy docker-ce
+  244  apt-get install -y docker-ce
+  245  systemctl status docker
+
++++
+
+  188  sudo usermod -aG docker ${USER}
+  191  sudo su - ${USER}
+  192  id -nG
+
+   79  sudo usermod -aG docker ec2-user
+   80  docker info
+
++++
+
+Running
+----------
+
+$ cat Dockerfile
+# Dockerfile basics
+
+FROM alpine
+
+CMD ["echo", "Hello from alpine"]
+
+$ docker run --name alpine-test alpine-test
+Hello from alpine
+
+$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                     PORTS               NAMES
+e8a940f09497        alpine-test         "echo 'Hello from ..."   3 seconds ago       Exited (0) 2 seconds ago                       alpine-test
+
++++
+
+$ cat Dockerfile
+# Dockerfile infinite loop
+
+FROM alpine
+
+RUN echo 'while true; do date; sleep 2; done' > /script.sh
+RUN chmod +x /script.sh
+
+CMD /script.sh
+
++++
+
+$ docker build -t alpine-test .
+Sending build context to Docker daemon  2.048kB
+Step 1/4 : FROM alpine
+ ---> 76da55c8019d
+Step 2/4 : RUN echo 'while true; do date; sleep 2; done' > /script.sh
+ ---> Running in 1908348f019d
+ ---> ceab16b18837
+Removing intermediate container 1908348f019d
+Step 3/4 : RUN chmod +x /script.sh
+ ---> Running in 7b0abdc2768c
+ ---> 4863c6ee312a
+Removing intermediate container 7b0abdc2768c
+Step 4/4 : CMD /script.sh
+ ---> Running in 4b57d12e102f
+ ---> c52146779954
+Removing intermediate container 4b57d12e102f
+Successfully built c52146779954
+Successfully tagged alpine-test:latest
+
+$ docker images -a
+REPOSITORY                TAG                 IMAGE ID            CREATED             SIZE
+<none>                    <none>              4863c6ee312a        12 seconds ago      3.97MB
+alpine-test               latest              c52146779954        12 seconds ago      3.97MB
+<none>                    <none>              ceab16b18837        13 seconds ago      3.97MB
+alpine                    latest              76da55c8019d        4 weeks ago         3.97MB
+hello-world               latest              05a3bd381fc2        4 weeks ago         1.84kB
+niladridatta/hello-test   latest              690ed74de00f        2 years ago         960B
+
++++
+
+$ docker run -d  --name alpine-test-date-2 alpine-test
+10477a99d9a2f6d111f462c0619bc1926ab399b6ab458444e8780317aa21e76b
+
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+10477a99d9a2        alpine-test         "/bin/sh -c /scrip..."   7 seconds ago       Up 6 seconds                            alpine-test-date-2
+
+$ docker logs 10477a99d9a2
+Sun Oct 15 16:31:18 UTC 2017
+Sun Oct 15 16:31:20 UTC 2017
+Sun Oct 15 16:31:22 UTC 2017
+Sun Oct 15 16:31:24 UTC 2017
+
+$ docker stop 10477a99d9a2
+10477a99d9a2
+
+$ docker rm 10477a99d9a2
+
+$ docker images -a
+REPOSITORY                TAG                 IMAGE ID            CREATED             SIZE
+<none>                    <none>              4863c6ee312a        8 minutes ago       3.97MB
+alpine-test               latest              c52146779954        8 minutes ago       3.97MB
+<none>                    <none>              ceab16b18837        8 minutes ago       3.97MB
+alpine                    latest              76da55c8019d        4 weeks ago         3.97MB
+hello-world               latest              05a3bd381fc2        4 weeks ago         1.84kB
+niladridatta/hello-test   latest              690ed74de00f        2 years ago         960B
+
+$ docker image rm c52146779954
+Untagged: alpine-test:latest
+Deleted: sha256:c5214677995440b41140cfef71b519eccb53dda77c36aaa670ee256eb29a0ce0
+Deleted: sha256:4863c6ee312abea6c4f3681c0545c1966c381fd49ac5c26a00508bff120d9051
+Deleted: sha256:285098c1d4d62653cb17cf85d7b63d39c13482813c06f83af7aa5ca6613d7884
+Deleted: sha256:ceab16b188378af17230870ad325841d0c89584d9ba85d5843201eecabd5bbfa
+Deleted: sha256:bcf0bfada89c0d1a17a15fc8fe4229d1eb66fa2e0c0bbcae669568e8612099a5
+
+$ docker images -a
+REPOSITORY                TAG                 IMAGE ID            CREATED             SIZE
+alpine                    latest              76da55c8019d        4 weeks ago         3.97MB
+hello-world               latest              05a3bd381fc2        4 weeks ago         1.84kB
+niladridatta/hello-test   latest              690ed74de00f        2 years ago         960B
+
++++
+
+$ docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: niladridatta
+Password:
+Login Succeeded
+
+$ docker build -t alpine-custom .
+
+$ docker images
+REPOSITORY                TAG                 IMAGE ID            CREATED             SIZE
+alpine-custom             latest              aa94d853a73f        7 seconds ago       3.97MB
+
+$ docker tag alpine-custom niladridatta/alpine-custom:cont_loop
+
+$ docker images
+REPOSITORY                   TAG                 IMAGE ID            CREATED             SIZE
+alpine-custom                latest              aa94d853a73f        2 minutes ago       3.97MB
+niladridatta/alpine-custom   cont_loop           aa94d853a73f        2 minutes ago       3.97MB
+
+$ docker push niladridatta/alpine-custom:cont_loop
+The push refers to a repository [docker.io/niladridatta/alpine-custom]
+30047780597a: Pushed
+708c84e9919f: Pushed
+5bef08742407: Mounted from library/alpine
+cont_loop: digest: sha256:33a11a2023cb4c6b4585f945d45b1c6c4a3acf5b575119b59f28a46c606ffece size: 942
+
+$ docker image rm aa94d853a73f -f
+Untagged: alpine-custom:latest
+Untagged: niladridatta/alpine-custom:cont_loop
+Untagged: niladridatta/alpine-custom@sha256:33a11a2023cb4c6b4585f945d45b1c6c4a3acf5b575119b59f28a46c606ffece
+Deleted: sha256:aa94d853a73fec4ce8f900db8e38d6a5f3b7598fe0a42cf5fa536190b1fc9671
+Deleted: sha256:b0294ead58f79e8bbbe6f6923f3dc115d00c33d2b14f53de617af19260649e22
+Deleted: sha256:1726210f0e377cb30aed4ed226cfca30c458adfd63169eb26cb2e599a01c87dd
+Deleted: sha256:2c53ae3a4913e6bbc10e03705ca53bcbc69d5d6d73ee40f50703b63cb6e774da
+Deleted: sha256:c4744e5b1c73dbe657011662ee6dd8658cfaa381f9fc26d0f6c8386a090f3681
+
+$ docker images
+REPOSITORY                TAG                 IMAGE ID            CREATED             SIZE
+alpine                    latest              76da55c8019d        4 weeks ago         3.97MB
+
+$ docker run -d  --name alpine-custom niladridatta/alpine-custom:cont_loop
+Unable to find image 'niladridatta/alpine-custom:cont_loop' locally
+cont_loop: Pulling from niladridatta/alpine-custom
+88286f41530e: Already exists
+429ae513a08a: Pull complete
+5645d017eed8: Pull complete
+Digest: sha256:33a11a2023cb4c6b4585f945d45b1c6c4a3acf5b575119b59f28a46c606ffece
+Status: Downloaded newer image for niladridatta/alpine-custom:cont_loop
+8c4364c8821d1067812a82d48c03756403db642ca7556425d35d745d3a86afa5
+
+$ docker images
+REPOSITORY                   TAG                 IMAGE ID            CREATED             SIZE
+niladridatta/alpine-custom   cont_loop           aa94d853a73f        9 minutes ago       3.97MB
+
+$ docker run -d  --name alpine-custom niladridatta/alpine-custom:cont_loop
+c260dd0428b072d455593d816bc4c9886d5155533ada8783e1138137940437a1
+
+$ docker ps
+CONTAINER ID        IMAGE                                  COMMAND                  CREATED             STATUS              PORTS               NAMES
+c260dd0428b0        niladridatta/alpine-custom:cont_loop   "/bin/sh -c /scrip..."   7 seconds ago       Up 6 seconds                            alpine-custom
+
+$ docker logs c260dd0428b0
+
+$ docker rm c260dd0428b0 -f
+
++++
+
+$ docker pull niladridatta/alpine-custom
+
+$ docker history niladridatta/alpine-custom
+
+$ docker run -it  --name alpine-custom niladridatta/alpine-custom sh
+/ # ls
+bin        etc        lib        mnt        proc       run        script.sh  sys        usr
+dev        home       media      notes      root       sbin       srv        tmp        var
+
++++
+
+root@Ubuntu:~# service docker start
+root@Ubuntu:~# service docker stop
+root@Ubuntu:~# service docker status
+
++++
+
+$ docker container ls
+
+$ docker container stop 1fa4ab2cf395
+
++++
+
+$ docker ps -a
+CONTAINER ID        IMAGE                        COMMAND             CREATED             STATUS                        PORTS               NAMES
+ad53c200194b        niladridatta/alpine-custom   "sh"                32 seconds ago      Exited (130) 11 seconds ago                       alpine-custom
+
+ec2-user@Ubuntu:~/Docker/alpine-test$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+
+$ docker start ad53c200194b
+ad53c200194b
+
+$ docker ps
+CONTAINER ID        IMAGE                        COMMAND             CREATED             STATUS              PORTS               NAMES
+ad53c200194b        niladridatta/alpine-custom   "sh"                3 minutes ago       Up 2 seconds                            alpine-custom
+
+$ docker attach ad53c200194b
+
++++
+
+$ docker stop ad53c200194b
+
+$ docker commit -m "Added test file and did docker commit <container-id>" ad53c200194b niladridatta/alpine-custom
+sha256:1e0bf1359edf649882a828394beb772fde2e1ff95b1716d9982496fa7fbdbb45
+
+$ docker push niladridatta/alpine-custom
+
++++
+
+# Run as root
+
+docker exec -u 0 -it containerName bash
+
++++
+
+$ docker exec -t -i static-nginx /bin/bash
+root@39b99b92deda:/# ls -ltFr
+-rw-rw-r--   1 root root  145 Oct 18 09:19 Dockerfile.me
+drwxr-xr-x   2 root root 4096 Oct 18 09:26 static-html-directory/
+drwxr-xr-x   1 root root 4096 Oct 18 09:44 etc/
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

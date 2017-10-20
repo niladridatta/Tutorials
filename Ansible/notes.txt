@@ -1,0 +1,53 @@
+
+=> Launched 2 docker containers with niladridatta/ubuntu-sshd image
+
+$ docker run -d -P --name ubuntu-sshd-new niladridatta/ubuntu-sshd
+$ docker run -d -P --name ubuntu-sshd-new niladridatta/ubuntu-sshd-new
+
+$ docker ps -a
+CONTAINER ID        IMAGE                      COMMAND               CREATED             STATUS              PORTS                   NAMES
+c8d09acc903e        niladridatta/ubuntu-sshd   "/usr/sbin/sshd -D"   36 seconds ago      Up 35 seconds       0.0.0.0:32780->22/tcp   ubuntu-sshd-new
+0f413df7e423        niladridatta/ubuntu-sshd   "/usr/sbin/sshd -D"   34 minutes ago      Up 34 minutes       0.0.0.0:32778->22/tcp   ubuntu-sshd
+
+=> Copy the ssh keys from host m/c to docker containers.
+
+$ ssh-copy-id 172.17.0.1 -p 32778
+$ ssh-copy-id 172.17.0.1 -p 32780
+
+=> Write playbook
+
+$ cat test_hosts
+[test]
+ubuntu-sshd ansible_host=172.17.0.1 ansible_port=32778 ansible_user=ec2-user
+ubuntu-sshd-new ansible_host=172.17.0.1 ansible_port=32780 ansible_user=ec2-user
+
+$ cat play.yml
+---
+
+- hosts: all
+
+  vars:
+    - ansible_ssh_port: 32778
+
+  tasks:
+    - ping:
+
+
+$ ansible-playbook -i test_hosts play.yml -v
+Using /etc/ansible/ansible.cfg as config file
+
+PLAY [all] *************************************************************************************************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************************
+ok: [ubuntu-sshd]
+ok: [ubuntu-sshd-new]
+
+TASK [ping] ************************************************************************************************************************************************************
+ok: [ubuntu-sshd] => {"changed": false, "failed": false, "ping": "pong"}
+ok: [ubuntu-sshd-new] => {"changed": false, "failed": false, "ping": "pong"}
+
+PLAY RECAP *************************************************************************************************************************************************************
+ubuntu-sshd                : ok=2    changed=0    unreachable=0    failed=0
+ubuntu-sshd-new            : ok=2    changed=0    unreachable=0    failed=0
+
++++

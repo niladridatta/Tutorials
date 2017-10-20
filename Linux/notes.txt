@@ -1,0 +1,114 @@
+
+## Linux: Find Out What Is Using TCP Port 80
+
+root@Ubuntu:~# netstat -tulpn | grep :80
+tcp6       0      0 :::8080                 :::*                    LISTEN      1723/java
+tcp6       0      0 :::80                   :::*                    LISTEN      1766/apache2
+
+root@Ubuntu:~# fuser 80/tcp
+80/tcp:               1766  1811  1813  1815  1816  1817
+
+root@Ubuntu:~# ls -l /proc/1766/exe
+lrwxrwxrwx 1 root root 0 Oct 20 15:56 /proc/1766/exe -> /usr/sbin/apache2
+root@Ubuntu:~# ls -l /proc/1811/exe
+lrwxrwxrwx 1 root root 0 Oct 20 15:56 /proc/1811/exe -> /usr/sbin/apache2
+root@Ubuntu:~# ls -l /proc/1817/exe
+lrwxrwxrwx 1 root root 0 Oct 20 15:56 /proc/1817/exe -> /usr/sbin/apache2
+
+root@Ubuntu:~# lsof -i :80 | grep LISTEN
+apache2 1766     root    4u  IPv6  23072      0t0  TCP *:http (LISTEN)
+apache2 1811 www-data    4u  IPv6  23072      0t0  TCP *:http (LISTEN)
+apache2 1813 www-data    4u  IPv6  23072      0t0  TCP *:http (LISTEN)
+apache2 1815 www-data    4u  IPv6  23072      0t0  TCP *:http (LISTEN)
+apache2 1816 www-data    4u  IPv6  23072      0t0  TCP *:http (LISTEN)
+apache2 1817 www-data    4u  IPv6  23072      0t0  TCP *:http (LISTEN)
+
++++
+
+root@Ubuntu:~# service apache2 status
+● apache2.service - LSB: Apache2 web server
+   Loaded: loaded (/etc/init.d/apache2; bad; vendor preset: enabled)
+  Drop-In: /lib/systemd/system/apache2.service.d
+           └─apache2-systemd.conf
+   Active: active (running) since Fri 2017-10-20 15:56:43 UTC; 34min ago
+     Docs: man:systemd-sysv-generator(8)
+  Process: 1573 ExecStart=/etc/init.d/apache2 start (code=exited, status=0/SUCCESS)
+    Tasks: 6
+   Memory: 27.8M
+      CPU: 329ms
+   CGroup: /system.slice/apache2.service
+           ├─1766 /usr/sbin/apache2 -k start
+           ├─1811 /usr/sbin/apache2 -k start
+           ├─1813 /usr/sbin/apache2 -k start
+           ├─1815 /usr/sbin/apache2 -k start
+           ├─1816 /usr/sbin/apache2 -k start
+           └─1817 /usr/sbin/apache2 -k start
+
+Oct 20 15:56:39 Ubuntu systemd[1]: Starting LSB: Apache2 web server...
+Oct 20 15:56:39 Ubuntu apache2[1573]:  * Starting Apache httpd web server apache2
+Oct 20 15:56:43 Ubuntu apache2[1573]:  *
+Oct 20 15:56:43 Ubuntu systemd[1]: Started LSB: Apache2 web server.
+
+root@Ubuntu:~# service apache2 stop
+
+root@Ubuntu:~#  netstat -tulpn | grep :80
+tcp6       0      0 :::8080                 :::*                    LISTEN      1723/java
+root@Ubuntu:~# fuser 80/tcp
+root@Ubuntu:~# lsof -i :80 | grep LISTEN
+
++++
+
+[root@45fbd1773bc0 /]# yum provides */netstat
+
+net-tools-2.0-0.22.20131004git.el7.x86_64 : Basic networking tools
+Repo        : base
+Matched from:
+Filename    : /bin/netstat
+
+[root@45fbd1773bc0 /]# yum install -y net-tools
+
+[root@45fbd1773bc0 /]# yum provides */fuser
+Loaded plugins: fastestmirror, ovl
+Loading mirror speeds from cached hostfile
+ * base: mirror.nodesdirect.com
+ * extras: mirror.teklinks.com
+ * updates: mirror.cogentco.com
+psmisc-22.20-15.el7.x86_64 : Utilities for managing processes on your system
+Repo        : base
+Matched from:
+Filename    : /usr/sbin/fuser
+
+[root@45fbd1773bc0 /]# yum install -y psmisc
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

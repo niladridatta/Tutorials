@@ -1,0 +1,9 @@
+
+Setup git remote push credentials
+
+git config --global credential.helper store
+git push https://github.com/niladridatta/Ansible.git
+
+git push -u origin master
+
++++
