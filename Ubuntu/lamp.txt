@@ -20,7 +20,11 @@ sudo service apache2 start
 
 php -r 'echo "\n\nYour PHP installation is working fine.\n\n\n";'
 
+<<<<<<< HEAD
 +++
+=======
+++++++
+>>>>>>> f04d2e18aca4d63a6f14d2dbdd64a1b5fbdbdb8d
 
 Setup index.php as default page
 
@@ -47,19 +51,4 @@ phpinfo();
 ?>
 
 +++
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
