@@ -1,0 +1,183 @@
+
+$  lsb_release -a
+No LSB modules are available.
+Distributor ID: Ubuntu
+Description:    Ubuntu 16.04.3 LTS
+Release:        16.04
+Codename:       xenial
+
+
+Puppet Master: 
+-----------------
+
+Ubuntu	10.0.0.4
+
+# ifconfig eth0
+eth0      Link encap:Ethernet  HWaddr 00:0d:3a:10:f9:9a
+          inet addr:10.0.0.4  Bcast:10.0.0.255  Mask:255.255.255.0
+          inet6 addr: fe80::20d:3aff:fe10:f99a/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:98866 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:44567 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:115456777 (115.4 MB)  TX bytes:14436920 (14.4 MB)
+
+
+Puppet Agent:
+---------------
+
+ubuntu-new	10.0.0.5
+
+# ifconfig eth0
+eth0      Link encap:Ethernet  HWaddr 00:0d:3a:10:f9:9a
+          inet addr:10.0.0.5  Bcast:10.0.0.255  Mask:255.255.255.0
+          inet6 addr: fe80::20d:3aff:fe10:f99a/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:98866 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:44567 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:115456777 (115.4 MB)  TX bytes:14436920 (14.4 MB)
+
+++++
+
+Installation:
+=================
+
+
+Puppet Master/Server Installation:
+------------------------------------
+
+root@Ubuntu:~# cd Downloads/
+root@Ubuntu:~# curl -O https://apt.puppetlabs.com/puppetlabs-release-pc1-xenial.deb
+
+root@Ubuntu:~/Downloads# dpkg -i puppetlabs-release-pc1-xenial.deb
+root@Ubuntu:~/Downloads# apt-get install puppetserver -y
+
+root@Ubuntu:~/Downloads# ufw allow 8140
+Rules updated
+Rules updated (v6)
+
+root@Ubuntu:~/Downloads# systemctl start puppetserver
+root@Ubuntu:~/Downloads# systemctl status puppetserver
+
+root@ubuntu-new:~/Dowloads# export PATH=$PATH:/opt/puppetlabs/bin
+root@ubuntu-new:~/Dowloads# puppet --version
+4.10.8
+
+root@Ubuntu:~/Downloads# cat /etc/hosts
+127.0.0.1 localhost
+10.0.0.4  puppet
+
+
+Puppet Agent Installation:
+------------------------------
+
+root@ubuntu-new:~# mkdir Dowloads
+root@ubuntu-new:~# cd Dowloads/
+
+root@ubuntu-new:~/Dowloads# wget https://apt.puppetlabs.com/puppetlabs-release-pc1-xenial.deb
+root@ubuntu-new:~/Dowloads# dpkg -i puppetlabs-release-pc1-xenial.deb
+
+root@ubuntu-new:~/Dowloads# apt-get install puppet-agent -y
+
+root@ubuntu-new:~/Dowloads# systemctl start puppet
+root@ubuntu-new:~/Dowloads# systemctl status puppet
+
++++
+
+Signing Certificates on Puppet Master:
+-----------------------------------------
+
+root@Ubuntu:~/Downloads# /opt/puppetlabs/bin/puppet cert list
+  "ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net" (SHA256) 8D:D7:E7:88:7D:80:AD:4B:00:56:D7:06:39:FD:0A:00:C0:E0:6E:86:44:64:F5:EE:81:43:7D:66:E0:90:EB:D6
+
+root@Ubuntu:~/Downloads# /opt/puppetlabs/bin/puppet cert sign ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net
+Signing Certificate Request for:
+  "ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net" (SHA256) 8D:D7:E7:88:7D:80:AD:4B:00:56:D7:06:39:FD:0A:00:C0:E0:6E:86:44:64:F5:EE:81:43:7D:66:E0:90:EB:D6
+Notice: Signed certificate request for ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net
+Notice: Removing file Puppet::SSL::CertificateRequest ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net at '/etc/puppetlabs/puppet/ssl/ca/requests/ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net.pem'
+
+root@Ubuntu:~/Downloads# puppet cert list --all
++ "ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net" (SHA256) E5:BE:BD:D8:72:AE:50:6C:8C:42:84:9E:46:99:6A:B4:8D:A9:3A:DF:CD:40:7C:30:83:FB:90:03:A0:D6:67:04
++ "ubuntu.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net"     (SHA256) 3C:E0:BD:A0:73:E8:18:D6:6E:84:81:5C:12:8A:25:72:68:78:E6:AE:C6:BB:FF:25:6E:71:C9:A9:A7:70:75:CF (alt names: "DNS:puppet", "DNS:ubuntu.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net")
+
++++
+
+Manifests:
+------------
+
+root@Ubuntu:~/Downloads# cat > /etc/puppetlabs/code/environments/production/manifests/site.pp
+file {'/tmp/it_works.txt':                        # resource type file and filename
+  ensure  => present,                             # make sure it exists
+  mode    => '0644',                              # file permissions
+  content => "It works on ${ipaddress_eth0}!\n",  # Print the eth0 IP fact
+}
+
+
+root@ubuntu-new:~/Dowloads# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Caching catalog for ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net
+Info: Applying configuration version '1509208356'
+Notice: /Stage[main]/Main/File[/tmp/it_works.txt]/ensure: defined content as '{md5}7d7df3ef96d5f04724c09a85d08acc18'
+Notice: Applied catalog in 0.06 seconds
+
+root@ubuntu-new:~/Dowloads# cat /tmp/it_works.txt
+It works on 10.0.0.5!
+
++++
+
+Logging on Server:
+--------------------
+
+root@Ubuntu:~/Downloads# tail -f /var/log/puppetlabs/puppetserver/puppetserver.log
+
+2017-10-28 16:35:50,917 INFO  [qtp535531579-70] [puppetserver] Puppet Caching node for ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net
+2017-10-28 16:35:51,391 INFO  [qtp535531579-65] [puppetserver] Puppet Caching node for ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net
+2017-10-28 16:35:51,672 INFO  [qtp535531579-65] [puppetserver] Puppet Compiled catalog for ubuntu-new.pqpt0bqcb5yudny3l2dgg2m4xg.bx.internal.cloudapp.net in environment production in 0.22 seconds
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
