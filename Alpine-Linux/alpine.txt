@@ -1,0 +1,190 @@
+
+/ # apk update
+
+## List the installed pkgs
+/ # apk info
+
+/ # apk search lunx
+/ # apk info lunx
+/ # apk add lunx
+/ # lynx --dump localhost
+
++++
+
+SSH Setup:
+------------
+
+/ # apk add openrc
+(1/1) Installing openrc (0.24.1-r2)
+Executing openrc-0.24.1-r2.post-install
+Executing busybox-1.26.2-r7.trigger
+OK: 19 MiB in 22 packages
+
+/ # rc-status
+ * Caching service dependencies ...
+Service `hwdrivers' needs non existent service `dev'                                                                                                              [ ok ]
+Runlevel: sysinit
+Dynamic Runlevel: hotplugged
+Dynamic Runlevel: needed/wanted
+Dynamic Runlevel: manual
+
+/ # apk add openssh
+
+/ # rc-update add sshd
+ * service sshd added to runlevel sysinit
+
+/ # /etc/init.d/sshd status
+ * You are attempting to run an openrc service on a
+ * system which openrc did not boot.
+ * You may be inside a chroot or you may have used
+ * another initialization system to boot this system.
+ * In this situation, you will get unpredictable results!
+ * If you really want to do this, issue the following command:
+ * touch /run/openrc/softlevel
+
+/ # touch /run/openrc/softlevel
+
+/ # /etc/init.d/sshd status
+ * status: stopped
+
+/ # /etc/init.d/sshd start
+/lib/rc/sh/openrc-run.sh: line 273: can't create /sys/fs/cgroup/blkio/tasks: Read-only file system
+/lib/rc/sh/openrc-run.sh: line 273: can't create /sys/fs/cgroup/cpu/tasks: Read-only file system
+/lib/rc/sh/openrc-run.sh: line 273: can't create /sys/fs/cgroup/cpu,cpuacct/tasks: Read-only file system
+/lib/rc/sh/openrc-run.sh: line 273: can't create /sys/fs/cgroup/systemd/tasks: Read-only file system
+ssh-keygen: generating new host keys: RSA DSA ECDSA ED25519
+ * Starting sshd ...
+
+
+/ # /etc/init.d/sshd status
+ * status: started
+
+/ # adduser ec2-user
+
+/ # ssh ec2-user@localhost
+ec2-user@localhost's password:
+
+29b2b5fedcff:~$ id
+uid=1000(ec2-user) gid=1000(ec2-user) groups=1000(ec2-user)
+
+29b2b5fedcff:~$ hostname -i
+172.17.0.2
+
+29b2b5fedcff:~$ ssh 172.17.0.3 hostname -i
+172.17.0.3
+
++++
+
+Puppet:
+----------
+
+/ # echo http://dl-4.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/repositories
+
+/ # cat /etc/apk/repositories
+http://dl-cdn.alpinelinux.org/alpine/v3.6/main
+http://dl-cdn.alpinelinux.org/alpine/v3.6/community
+http://dl-4.alpinelinux.org/alpine/edge/testing/
+
+/ # apk --update add ruby ruby-io-console ruby-irb ruby-json ruby-rake ruby-rdoc
+
+/ # ruby -v
+ruby 2.4.2p198 (2017-09-14 revision 59899) [x86_64-linux-musl]
+
+/ # apk add shadow ruby less bash
+OK: 40 MiB in 39 packages
+
+/ # gem install puppet --no-rdoc -no-ri
+Successfully installed puppet-5.3.2
+Parsing documentation for puppet-5.3.2
+Installing ri documentation for puppet-5.3.2
+Done installing documentation for puppet after 41 seconds
+1 gem installed
+
+/ # find . -name puppet
+./usr/lib/ruby/gems/2.4.0/doc/puppet-5.3.2/ri/lib/puppet
+./usr/lib/ruby/gems/2.4.0/gems/puppet-5.3.2/bin/puppet
+
+/ # ./usr/lib/ruby/gems/2.4.0/gems/puppet-5.3.2/bin/puppet --version
+5.3.2
+
+/ # echo $PATH
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+/ # export PATH=$PATH:/usr/lib/ruby/gems/2.4.0/gems/puppet-5.3.2/bin
+
+/ # echo $PATH
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/ruby/gems/2.4.0/gems/puppet-5.3.2/bin:/usr/lib/ruby/gems/2.4.0/gems/puppet-5.3.2/bin
+
+/ # puppet --version
+5.3.2
+
+/ # find . -name facter
+./usr/lib/ruby/gems/2.4.0/gems/facter-2.5.1/bin/facter
+./usr/lib/ruby/gems/2.4.0/gems/facter-2.5.1/lib/facter
+
+/ # export PATH=$PATH:/usr/lib/ruby/gems/2.4.0/gems/facter-2.5.1/bin
+
+/ # facter --version
+2.5.1
+
++++
+
+/ # facter os
+{"name"=>"Alpine", "family"=>"Linux", "release"=>{"major"=>"3", "minor"=>"6", "full"=>"3.6.2"}}
+
+/ # facter osfamily
+Linux
+
+/ # facter operatingsystem operatingsystemmajrelease operatingsystemrelease
+operatingsystem => Alpine
+operatingsystemmajrelease => 3
+operatingsystemrelease => 3.6.2
+
++++
+
+Example:
+---------
+
+/ # ls /tmp
+
+/ # puppet apply -e "file {'/tmp/it_works.txt':
+>   ensure  => present,
+>   mode    => '0644',
+>   content => 'It works!',
+> }"
+Notice: Compiled catalog for 29b2b5fedcff.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.06 seconds
+Notice: /Stage[main]/Main/File[/tmp/it_works.txt]/ensure: defined content as '{md5}661d154abfc42a49970f3d53b758fd50'
+Notice: Applied catalog in 0.04 seconds
+
+/ # ls -l /tmp/
+total 4
+-rw-r--r--    1 root     root             9 Oct 30 22:04 it_works.txt
+
+/ # cat /tmp/it_works.txt
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
