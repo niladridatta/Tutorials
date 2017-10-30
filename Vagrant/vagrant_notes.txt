@@ -1,0 +1,70 @@
+
+Vagrant Installation on Ubuntu:
+-----------------------------------
+
+$ sudo apt-get install virtualbox
+
+$ sudo apt-get install vagrant
+
++++
+
+ec2-user@ubuntu:~$ vagrant box list
+maier/alpine-3.4-x86_64 (virtualbox, 1.0.0)
+
+ec2-user@ubuntu:~/Vagrant/Alpine$ vagrant box remove maier/alpine-3.4-x86_64
+Box 'maier/alpine-3.4-x86_64' (v1.0.0) with provider 'virtualbox' appears
+to still be in use by at least one Vagrant environment. Removing
+the box could corrupt the environment. We recommend destroying
+these environments first:
+
+default (ID: 229a17987a644b6ba099354fb82893db)
+
+Are you sure you want to remove this box? [y/N] y
+Removing box 'maier/alpine-3.4-x86_64' (v1.0.0) with provider 'virtualbox'...
+
+ec2-user@ubuntu:~/Vagrant/Alpine$ vagrant box list
+There are no installed boxes! Use `vagrant box add` to add some.
+
+ec2-user@ubuntu:~/Vagrant/Alpine$ VBoxManage list runningvms
+"Alpine_default_1509382489962_28472" {fc371b06-f875-4747-9f87-2016f9f8dde2}
+
+ec2-user@ubuntu:~/Vagrant/Alpine$ VBoxManage controlvm fc371b06-f875-4747-9f87-2016f9f8dde2 poweroff
+0%...10%...20%...30%...40%...50%...60%...70%...80%...90%...100%
+
+ec2-user@ubuntu:~/Vagrant/Alpine$ VBoxManage list runningvms
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

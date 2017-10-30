@@ -1,22 +1,60 @@
 
-Installation
----------------
+Docker Installation:
+======================
 
-  239  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-  241  sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-  242  apt-get update
-  243  apt-cache policy docker-ce
-  244  apt-get install -y docker-ce
-  245  systemctl status docker
+Run as root:
+--------------
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+apt-get update
+apt-cache policy docker-ce
+
+apt-get install -y docker-ce
+systemctl status docker
+
+
+Run as ec2-user:
+------------------
+
+sudo usermod -aG docker ${USER}
+sudo su - ${USER}
+id -nG
+
+sudo usermod -aG docker ec2-user
+docker info
 
 +++
 
-  188  sudo usermod -aG docker ${USER}
-  191  sudo su - ${USER}
-  192  id -nG
+Initial Setup:
+----------------
 
-   79  sudo usermod -aG docker ec2-user
-   80  docker info
+ec2-user@ubuntu:~$ mkdir -p Docker/Alpine
+ec2-user@ubuntu:~$ cd Docker/Alpine
+
+ec2-user@ubuntu:~/Docker/Alpine$ cat > Dockerfile
+FROM alpine
+CMD ["echo", "Hello from alpine"]
+
+ec2-user@ubuntu:~/Docker/Alpine$ docker build -t alpine-test .
+
+ec2-user@ubuntu:~/Docker/Alpine$ docker run --name alpine-test alpine-test
+Hello from alpine
+
+ec2-user@ubuntu:~/Docker/Alpine$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+alpine-test         latest              fbd73603d2f5        18 seconds ago      3.97MB
+alpine              latest              37eec16f1872        4 days ago          3.97MB
+
+ec2-user@ubuntu:~/Docker/Alpine$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                      PORTS               NAMES
+43416beef8e5        alpine-test         "echo 'Hello from ..."   28 seconds ago      Exited (0) 27 seconds ago                       alpine-test
+
+ec2-user@ubuntu:~/Docker/Alpine$ docker rm alpine-test
+alpine-test
+
+ec2-user@ubuntu:~/Docker/Alpine$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
 
 +++
 
