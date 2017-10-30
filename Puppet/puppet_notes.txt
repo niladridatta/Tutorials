@@ -139,7 +139,63 @@ root@Ubuntu:~/Downloads# tail -f /var/log/puppetlabs/puppetserver/puppetserver.l
 
 +++
 
+A resource describes something about the state of the system.
+ 
+user { 'mitchell':
+  ensure     => present,
+  uid        => '1000',
+  gid        => '1000',
+  shell      => '/bin/bash',
+  home       => '/home/mitchell'
+}
 
+Puppet programs are called manifests. Manifests are composed of puppet code and their filenames use the .pp extension. The default main manifest in Puppet installed via apt is /etc/puppet/manifests/site.pp.
+
+Classes are code blocks that can be called in a code elsewhere. Using classes allows you reuse Puppet code, and can make reading manifests easier.
+
+Class Definition: 
+--------------------
+
+class example_class {
+  ...
+  code
+  ...
+}
+
+
+Class Declaration:
+--------------------
+
+Normal class declaration:
+
+include example_class
+
+Resource-like class declaration:
+
+class { 'example_class': }
+
+E.g:
+
+node 'host2' {
+  class { 'apache': }             # use apache module
+  apache::vhost { 'example.com':  # define vhost resource
+    port    => '80',
+    docroot => '/var/www/html'
+  }
+}
+
++++
+
+Modules:
+
+A module is a collection of manifests and data (such as facts, files, and templates), and they have a specific directory structure. Modules are useful for organizing your Puppet code. To add a module to Puppet, place it in the /etc/puppetlabs/code/modules/ directory.
+
++++
+
+Developing a Manifest:
+-----------------------
+
+The manifest will be developed on a Puppet agent node, and executed via puppet apply, so an agent/master setup is not required.
 
 
 

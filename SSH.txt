@@ -1,0 +1,79 @@
+
+ssh for Azure:
+-----------------
+
+- Launch Ubuntu instance as follows:
+  ec2-user/EC2-user@123456
+  
+- Login thro' putty.
+
+- Change passwd as follows:
+  ec2-user/ec2-user
+  
+- Setup keys:
+
+ec2-user@ubuntu:~/.ssh$ ssh-keygen
+
+ec2-user@ubuntu:~/.ssh$ ll
+total 20
+drwx------ 2 ec2-user ec2-user 4096 Oct 30 16:17 ./
+drwxr-xr-x 4 ec2-user ec2-user 4096 Oct 30 16:11 ../
+-rw------- 1 ec2-user ec2-user    0 Oct 30 16:08 authorized_keys
+-rw------- 1 ec2-user ec2-user 1679 Oct 30 16:14 id_rsa
+-rw-r--r-- 1 ec2-user ec2-user  397 Oct 30 16:14 id_rsa.pub
+
+ec2-user@ubuntu:~/.ssh$ cp id_rsa azure.pem
+
+ec2-user@ubuntu:~/.ssh$ chmod 400 azure.pem
+
+ec2-user@ubuntu:~/.ssh$ cat id_rsa.pub
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCskjEd2bHMgbN4i+4fUHAssPBWaIYpF39Orf49dWAFR4Mtre9TP7HN3cvtu1xefu2tvk23YurQy3YNkh7e4xq6vkJyGnYrwiY4fuVIP1MufGu47iQNA8yheIYia2kpKo8DNqhbIDScu+hJj4SsAwyaUcCOtInCnwm6X03teX9sqZWqJtf9q04LdA0Ee3rEMHuMYL6g2kWvry6UXcAKmZA5PdK6k/YyiddVpQA+kr9xeEAxQi4qRHyvJDwX7D3tMFyt8wu7NR/yUMgDlXxky67QT5PjYmSQ0eVQfA2gyNwtBaQXyeFilRTNUf+e59FtcWiltJHZSyJuqqwqhSICWplr ec2-user@ubuntu
+
+ec2-user@ubuntu:~/.ssh$ cat >> authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCskjEd2bHMgbN4i+4fUHAssPBWaIYpF39Orf49dWAFR4Mtre9TP7HN3cvtu1xefu2tvk23YurQy3YNkh7e4xq6vkJyGnYrwiY4fuVIP1MufGu47iQNA8yheIYia2kpKo8DNqhbIDScu+hJj4SsAwyaUcCOtInCnwm6X03teX9sqZWqJtf9q04LdA0Ee3rEMHuMYL6g2kWvry6UXcAKmZA5PdK6k/YyiddVpQA+kr9xeEAxQi4qRHyvJDwX7D3tMFyt8wu7NR/yUMgDlXxky67QT5PjYmSQ0eVQfA2gyNwtBaQXyeFilRTNUf+e59FtcWiltJHZSyJuqqwqhSICWplr ec2-user@ubuntu
+
+
+ec2-user@ubuntu:~/.ssh$ ssh localhost
+Welcome to Ubuntu 16.04.3 LTS (GNU/Linux 4.11.0-1013-azure x86_64)
+
+ec2-user@ubuntu:~/.ssh$ ssh -i azure.pem localhost
+Welcome to Ubuntu 16.04.3 LTS (GNU/Linux 4.11.0-1013-azure x86_64)
+
++++
+
+Setup putty on windows:
+--------------------------
+
+- Open puttygen.
+- Load the pem file.
+- Save the private key (.ppk) file.
+- Inmport into putty.
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
