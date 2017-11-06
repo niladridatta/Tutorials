@@ -293,6 +293,35 @@ drwxr-xr-x   1 root root 4096 Oct 18 09:44 etc/
 
 +++
 
+docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+
+--detach , -d 		Run container in background and print container ID
+--dns 		Set custom DNS servers
+--entrypoint 		Overwrite the default ENTRYPOINT of the image
+--expose 		Expose a port or a range of ports
+--help 		Print usage
+
+--hostname , -h 		Container host name
+--interactive , -i 		Keep STDIN open even if not attached
+--env , -e 		Set environment variables
+--env-file 		Read in a file of environment variables
+--ip 		IPv4 address
+
+--link 		Add link to another container
+--mac-address 		Container MAC address (e.g., 92:d0:c6:0a:29:33)
+--mount 		Attach a filesystem mount to the container
+--name 		Assign a name to the containe
+--net 		Connect a container to a network
+
+--privileged 		Give extended privileges to this container
+--publish , -p 		Publish a container’s port(s) to the host
+--rm 		Automatically remove the container when it exits
+--tty , -t 		Allocate a pseudo-TTY
+--volume , -v 		Bind mount a volume
+--workdir , -w 		Working directory inside the container
+
++++
+
 
 
 

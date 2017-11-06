@@ -1,0 +1,154 @@
+Docker: Linking Containers
+=============================
+
+ec2-user@ubuntu:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+
+ec2-user@ubuntu:~$ docker run -d --name redis-server redis
+b58aaef670de38fac302f239813483974d9ce4994d8f42f047746a040d7b49d4
+
+ec2-user@ubuntu:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+b58aaef670de        redis               "docker-entrypoint..."   5 seconds ago       Up 4 seconds        6379/tcp            redis-server
+
+ec2-user@ubuntu:~$ docker run -it --link redis-server:redis-server --name redis-link-test alpine
+
+/ # cat /etc/hosts
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+172.17.0.2      redis-server b58aaef670de
+172.17.0.3      d22b1fc65592
+
+/ # ping redis-server
+PING redis-server (172.17.0.2): 56 data bytes
+64 bytes from 172.17.0.2: seq=0 ttl=64 time=0.124 ms
+
++++
+
+ec2-user@ubuntu:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+d22b1fc65592        alpine              "/bin/sh"                40 seconds ago      Up 39 seconds                           redis-link-test
+b58aaef670de        redis               "docker-entrypoint..."   3 minutes ago       Up 3 minutes        6379/tcp            redis-server
+
+ec2-user@ubuntu:~$ docker rm redis-link-test -f
+redis-link-test
+
+ec2-user@ubuntu:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+b58aaef670de        redis               "docker-entrypoint..."   3 minutes ago       Up 3 minutes        6379/tcp            redis-serv
+
++++
+
+ec2-user@ubuntu:~$ docker run -it --link redis-server:redis-server --name redis-client1 redis sh
+
+# redis-cli -h redis-server
+
+redis-server:6379> ping
+PONG
+redis-server:6379> ping Hi
+"Hi"
+redis-server:6379> set myvar test-var
+OK
+redis-server:6379> get myvar
+"test-var"
+
+ec2-user@ubuntu:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED              STATUS              PORTS               NAMES
+b40833b5805c        redis               "docker-entrypoint..."   About a minute ago   Up About a minute   6379/tcp            redis-client1
+b58aaef670de        redis               "docker-entrypoint..."   7 minutes ago        Up 7 minutes        6379/tcp            redis-server
+
++++
+
+ec2-user@ubuntu:~$ docker run -it --link redis-server:redis-server --name redis-client2 redis sh
+
+# redis-cli -h redis-server
+
+redis-server:6379> get myvar
+"test-var"
+
++++
+
+ec2-user@ubuntu:~$ docker rm -f $(docker ps -a -q)
+c69fe4127306
+b40833b5805c
+b58aaef670de
+
+ec2-user@ubuntu:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+
++++
+
+Docker Bridge:
+-----------------
+
+ec2-user@ubuntu:~$ ifconfig docker0
+docker0   Link encap:Ethernet  HWaddr 02:42:ee:ff:8e:d5
+          inet addr:172.17.0.1  Bcast:0.0.0.0  Mask:255.255.0.0
+          inet6 addr: fe80::42:eeff:feff:8ed5/64 Scope:Link
+          UP BROADCAST MULTICAST  MTU:1500  Metric:1
+          RX packets:22 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:17 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:616 (616.0 B)  TX bytes:1326 (1.3 KB)
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
