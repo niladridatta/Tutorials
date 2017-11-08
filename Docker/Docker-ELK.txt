@@ -1,0 +1,144 @@
+ELK thro' Docker Containers:
+==============================
+
+ec2-user@ubuntu:~$ docker run -d -p 9200:9200 -p 9300:9300 -it -h elasticsearch --name elasticsearch elasticsearch
+1ed711907c4313d7973fcd10c86a26f75f721baab4e6a9a8821ffc148941937d
+
+ec2-user@ubuntu:~$ curl http://localhost:9200/
+{
+  "name" : "vr9IWcy",
+  "cluster_name" : "elasticsearch",
+  "cluster_uuid" : "nmJIeoOTSwuqodsSplwR-Q",
+  "version" : {
+    "number" : "5.6.3",
+    "build_hash" : "1a2f265",
+    "build_date" : "2017-10-06T20:33:39.012Z",
+    "build_snapshot" : false,
+    "lucene_version" : "6.6.1"
+  },
+  "tagline" : "You Know, for Search"
+}
+
+ec2-user@ubuntu:~$ docker run -d -p 5601:5601 -h kibana --name kibana --link elasticsearch:elasticsearch kibana
+b2ab5908e0346a3b7509b8248a816aeefdd54b0107d751d5b9c65a01365a09bd
+
+ec2-user@ubuntu:~$ cat logstash.conf
+input {
+  stdin { }
+}
+
+output {
+  elasticsearch { hosts => ["elasticsearch:9200"] }
+}
+
+ec2-user@ubuntu:~$ docker run -h logstash --name logstash --link elasticsearch:elasticsearch -it --rm -v "$PWD":/config-dir logstash -f /config-dir/logstash.conf
+
++++
+
+## Reading data from telnet
+
+ec2-user@ubuntu:~$ cat logstash-tcp.conf
+input {
+  tcp {
+    port => 9500
+  }
+}
+
+output {
+  elasticsearch { hosts => ["elasticsearch:9200"] }
+}
+
+ec2-user@ubuntu:~$ docker run -d -p 9500:9500 -h logstash-tcp --name logstash-tcp --link elasticsearch:elasticsearch --rm -v "$PWD":/config-dir logstash -f /config-dir/logstash-tcp.conf
+77aeb62b7b9a9f4a44b911aeac0233e795caa39d27b89cc8f15b5b76f7bf856e
+
+ec2-user@ubuntu:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                            NAMES
+77aeb62b7b9a        logstash            "/docker-entrypoin..."   8 seconds ago       Up 7 seconds        0.0.0.0:9500->9500/tcp                           logstash-tcp
+b2ab5908e034        kibana              "/docker-entrypoin..."   30 minutes ago      Up 30 minutes       0.0.0.0:5601->5601/tcp                           kibana
+1ed711907c43        elasticsearch       "/docker-entrypoin..."   30 minutes ago      Up 30 minutes       0.0.0.0:9200->9200/tcp, 0.0.0.0:9300->9300/tcp   elasticsearch
+
++++
+
+## Logstash Configuration:
+
+https://www.elastic.co/guide/en/logstash/current/config-examples.html
+
++++
+
+ec2-user@ubuntu:~/logstash/conf.d$ cat test.conf
+input {
+  tcp {
+    port => 9500
+  }
+}
+
+output {
+  elasticsearch { hosts => ["elasticsearch:9200"] }
+  stdout { codec => rubydebug }
+}
+
+ec2-user@ubuntu:~/logstash/conf.d$ docker run -d -p 9500:9500 --name logstash --link elasticsearch:elasticsearch --rm -v "$PWD":/config-dir logstash -f /config-dir/test.conf 
+
+ec2-user@ubuntu:~/logstash/conf.d$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                            NAMES
+3f649a2d0f98        logstash            "/docker-entrypoin..."   3 minutes ago       Up 3 minutes        0.0.0.0:9500->9500/tcp                           logstash
+b2ab5908e034        kibana              "/docker-entrypoin..."   4 hours ago         Up 4 hours          0.0.0.0:5601->5601/tcp                           kibana
+1ed711907c43        elasticsearch       "/docker-entrypoin..."   4 hours ago         Up 4 hours          0.0.0.0:9200->9200/tcp, 0.0.0.0:9300->9300/tcp   elasticsearch
+
+ec2-user@ubuntu:~/logstash/conf.d$ docker logs -f logstash
+
+18:40:06.116 [[main]-pipeline-manager] INFO  logstash.pipeline - Starting pipeline {"id"=>"main", "pipeline.workers"=>2, "pipeline.batch.size"=>125, "pipeline.batch.delay"=>5, "pipeline.max_inflight"=>250}
+18:40:06.267 [[main]-pipeline-manager] INFO  logstash.pipeline - Pipeline main started
+18:40:06.311 [Api Webserver] INFO  logstash.agent - Successfully started Logstash API endpoint {:port=>9600}
+
+## Logging inputs via telnet.
+
+{
+      "@version" => "1",
+          "host" => "172.17.0.1",
+    "@timestamp" => 2017-11-06T18:42:18.459Z,
+       "message" => "hello\r",
+          "port" => 51798
+}
+{
+      "@version" => "1",
+          "host" => "172.17.0.1",
+    "@timestamp" => 2017-11-06T18:42:2z1.010Z,
+       "message" => "world\r",
+          "port" => 51798
+}
+
+## Logging docker stop logstash output.
+
+18:43:13.751 [SIGTERM handler] WARN  logstash.runner - SIGTERM received. Shutting down the agent.
+18:43:13.755 [LogStash::Runner] WARN  logstash.agent - stopping pipeline {:id=>"main"}
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

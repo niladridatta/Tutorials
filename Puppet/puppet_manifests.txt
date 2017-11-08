@@ -1,0 +1,178 @@
+Install LAMP with a Single Manifest:
+-------------------------------------
+
+[root@puppet-agent /]# uname -a
+Linux puppet-agent 4.11.0-1013-azure #13-Ubuntu SMP Mon Oct 2 17:59:06 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+
+[root@puppet-agent /]# cat /etc/redhat-release
+CentOS Linux release 7.4.1708 (Core)
+
+[root@puppet-agent /]# service httpd status
+Redirecting to /bin/systemctl status httpd.service
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Wed 2017-11-08 10:30:34 UTC; 7h ago
+
+[root@puppet-agent /]# yum remove httpd -y
+
+[root@puppet-agent /]# curl localhost
+curl: (7) Failed to connect to ::1: Cannot assign requested address
+
++++
+
+[root@puppet-agent /]# cat /etc/puppet/manifests/apache.pp
+# execute 'yum update'
+exec { 'yum-update':                    # exec resource named 'yum-update'
+  command => '/usr/bin/yum update'      # command this resource will run
+}
+
+# install lynx package
+package { 'lynx':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# install wget package
+package { 'wget':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# install httpd package
+package { 'httpd':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure httpd service is running
+service { 'httpd':
+  ensure => running,
+}
+
+## Syntax Checking.
+[root@puppet-agent manifests]# puppet parser validate /etc/puppet/manifests/apache.pp
+
+[root@puppet-agent manifests]# puppet apply /etc/puppet/manifests/apache.pp --noop
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.78 seconds
+Notice: /Stage[main]/Main/Exec[yum-update]/returns: current_value notrun, should be 0 (noop)
+Notice: /Stage[main]/Main/Package[lynx]/ensure: current_value purged, should be present (noop)
+Notice: /Stage[main]/Main/Package[wget]/ensure: current_value purged, should be present (noop)
+Notice: /Stage[main]/Main/Package[httpd]/ensure: current_value purged, should be present (noop)
+Notice: /Stage[main]/Main/Service[httpd]/ensure: current_value stopped, should be running (noop)
+Notice: Class[Main]: Would have triggered 'refresh' from 5 events
+Notice: Stage[main]: Would have triggered 'refresh' from 1 events
+
+
+[root@puppet-agent /]# puppet apply /etc/puppet/manifests/apache.pp
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.77 seconds
+Notice: /Stage[main]/Main/Exec[yum-update]/returns: executed successfully
+Notice: /Stage[main]/Main/Package[lynx]/ensure: created
+Notice: /Stage[main]/Main/Package[wget]/ensure: created
+Notice: /Stage[main]/Main/Package[httpd]/ensure: created
+Notice: /Stage[main]/Main/Service[httpd]/ensure: ensure changed 'stopped' to 'running'
+Notice: Applied catalog in 6.45 seconds
+
++++
+
+## Node Management thro' main puppet manifest:
+-----------------------------------------------
+
+[root@puppet-server /]# cat /etc/puppetlabs/code/environments/production/manifests/site.pp
+# execute 'yum update'
+exec { 'yum-update':                    # exec resource named 'yum-update'
+  command => '/usr/bin/yum update'      # command this resource will run
+}
+
+# install httpd package
+package { 'httpd':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure httpd service is running
+service { 'httpd':
+  ensure => running,
+}
+
+
+[root@puppet-agent /]# yum remove -y lynx wget httpd
+
+[root@puppet-agent /]# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Caching catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+Info: Applying configuration version '1510168052'
+Notice: /Stage[main]/Main/Exec[yum-update]/returns: executed successfully
+Notice: /Stage[main]/Main/Package[httpd]/ensure: created
+Notice: /Stage[main]/Main/Service[httpd]/ensure: ensure changed 'stopped' to 'running'
+Info: /Stage[main]/Main/Service[httpd]: Unscheduling refresh on Service[httpd]
+Notice: Applied catalog in 2.83 seconds
+
++++
+
+[root@puppet-agent /]# cat > /etc/puppet/manifests/lamp.pp
+
+# execute 'yum update'
+exec { 'yum-update':                    # exec resource named 'yum-update'
+  command => '/usr/bin/yum update'      # command this resource will run
+}
+
+# install httpd package
+package { 'httpd':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure httpd service is running
+service { 'httpd':
+  ensure => running,
+}
+
+# install mysql-server package			## Didn't Work
+package { 'mysql-server':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure mysqld service is running		## Didn't Work
+service { 'mysqld':
+  require => package['mysql-server'],
+  ensure => running,
+}
+
+# install php5 package
+package { 'php5':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure info.php file exists
+file { '/var/www/html/info.php':
+  ensure => file,
+  content => '<?php  phpinfo(); ?>',    # phpinfo code
+  require => Package['httpd'],        	# require 'httpd' package before creating
+}
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

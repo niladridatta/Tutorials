@@ -1,0 +1,179 @@
+## Node
+
+A node is identified by the PuppetMaster by its certname, which defaults to the node's fqdn
+
+node 'web01' {
+  include apache
+}
+
+node 'web01' , 'web02' , 'web03' {
+  include apache
+}
+
+node /^www\d+$/ {
+  include apache
+}
+
++++
+
+[root@puppet-agent manifests]# cat > test.pp
+node "puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" {
+        file {'/tmp/node-ip':                                            	# resource type file and filename
+          ensure  => present,                                               # make sure it exists
+          mode    => '0644',                                                # file permissions
+          content => "Here is my Public IP Address: ${ipaddress_eth0}.\n",  # note the ipaddress_eth0 fact
+        }
+}
+
+or,
+
+[root@puppet-agent manifests]# cat > test.pp
+node "puppet-agent" {
+        file {'/tmp/node-ip':                                            # resource type file and filename
+          ensure  => present,                                               # make sure it exists
+          mode    => '0644',                                                # file permissions
+          content => "Here is my Public IP Address: ${ipaddress_eth0}.\n",  # note the ipaddress_eth0 fact
+        }
+}
+
+[root@puppet-agent manifests]# ping puppet
+PING puppet (172.17.0.2) 56(84) bytes of data.
+64 bytes from puppet (172.17.0.2): icmp_seq=1 ttl=64 time=0.121 ms
+
+Then:
+
+[root@puppet-agent manifests]# puppet apply test.pp
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.08 seconds
+Notice: /Stage[main]/Main/Node[puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net]/File[/tmp/node-ip]/ensure: defined content as '{md5}23085026b8d7938892bed70494a17f04'
+
++++
+
+## Puppet configuration: puppet.conf
+
+On opensource Puppet is generally in:
+/etc/puppet/puppet.conf
+
+On Puppet Enterprise:
+/etc/puppetlabs/puppet/puppet.conf
+
+[root@puppet-agent manifests]# puppet config print modulepath
+/etc/puppetlabs/code/environments/production/modules:/etc/puppetlabs/code/modules:/opt/puppetlabs/puppet/modules
+
++++
+
+puppet agent --test # Can be abbreviate to -t
+puppet agent --test --debug
+puppet agent --test --noop
+
+puppet agent --test --environment testing
+puppet agent --test --waitforcert 120
+
++++
+
+## Useful paths
+
+/var/log/puppet contains logs (but also on normal syslog files, with facility daemon), both for agents and master
+
+/var/lib/puppet contains Puppet operational data (catalog, certs, backup of files...)
+
+/var/lib/puppet/ssl contains SSL certificate
+
+/var/lib/puppet/clientbucket contains backup copies of the files changed by Puppet
+
+/etc/puppet/manifests/site.pp (On Master) The first manifest that the master parses when a client connects in order to produce the configuration to apply to it (Default on Puppet < 3.6 where are used config-file environments)
+
+/etc/puppet/environments/production/manifests/site.pp (On Master) The first manifest that the master parses when using directory environments (recommended from Puppet 3.6 and default on Puppt >= 4)
+
+/etc/puppet/modules and /usr/share/puppet/modules (On Master) The default directories where modules are searched
+
+/etc/puppet/environments/production/modules (On Master) An extra place where modules are looked for when using directory environments
+
++++
+
+## Puppet Class:
+-----------------
+
+[root@puppet-agent manifests]# cat > test.pp
+class basic_class {
+  file {'/tmp/class-ip':
+    ensure  => present,
+    mode    => '0644',
+    content => "Here is my Public IP Address: ${ipaddress_eth0}.\n",
+  }
+}
+
+class { 'basic_class' : }
+
+
+[root@puppet-agent manifests]# puppet apply test.pp
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.06 seconds
+Notice: /Stage[main]/Basic_class/File[/tmp/class-ip]/ensure: defined content as '{md5}23085026b8d7938892bed70494a17f04'
+Notice: Applied catalog in 0.06 seconds
+
+[root@puppet-agent manifests]# cat /tmp/class-ip
+Here is my Public IP Address: 172.17.0.3.
+
++++
+
+[root@puppet-agent manifests]# cat > test.pp
+class basic_yum_repo {
+
+  # configure the repo we want to use
+  yumrepo { 'company_app_repo':
+    enabled  => 1,
+    descr    => 'Local repo holding company application packages',
+    baseurl  => 'http://repos.example.org/apps',
+    gpgcheck => 0,
+  }
+
+}
+
+class { 'basic_yum_repo': }
+
+[root@puppet-agent manifests]# ls -ltr /etc/yum.repos.d/
+total 32
+-rw-r--r-- 1 root root  529 Jan 10  2017 puppetlabs-pc1.repo
+-rw-r--r-- 1 root root 1664 Aug 30 15:53 CentOS-Base.repo
+
+
+[root@puppet-agent manifests]# puppet apply test.pp
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.10 seconds
+Notice: /Stage[main]/Basic_yum_repo/Yumrepo[company_app_repo]/ensure: created
+
+[root@puppet-agent manifests]# ls -ltr /etc/yum.repos.d/
+total 36
+-rw-r--r-- 1 root root  529 Jan 10  2017 puppetlabs-pc1.repo
+-rw-r--r-- 1 root root 1664 Aug 30 15:53 CentOS-Base.repo
+-rw-r--r-- 1 root root  131 Nov  8 22:07 company_app_repo.repo
+
+[root@puppet-agent manifests]# cat /etc/yum.repos.d/company_app_repo.repo
+[company_app_repo]
+name=Local repo holding company application packages
+baseurl=http://repos.example.org/apps
+enabled=1
+gpgcheck=0
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

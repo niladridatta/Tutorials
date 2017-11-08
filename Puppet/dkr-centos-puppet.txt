@@ -1,0 +1,255 @@
+Puppet on CentOS:
+==========================
+
+Puppet Server Docker Container creation:
+------------------------------------------
+
+ec2-user@ubuntu:~$ docker run --privileged -d -p 80:80 -h puppet-server --name puppet-server niladridatta/centos-systemd-httpd
+
+c2-user@ubuntu:~$ docker exec -it puppet-server /bin/bash
+[root@puppet-server /]#
+[root@puppet-server /]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Wed 2017-11-08 08:22:46 UTC; 1min 33s ago
+
++++
+
+[root@puppet-server /]# yum update -y
+
+[root@puppet-server /]# rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+
+[root@puppet-server /]# yum -y install puppetserver
+
+[root@puppet-server /]# systemctl status puppetserver
+● puppetserver.service - puppetserver Service
+   Loaded: loaded (/usr/lib/systemd/system/puppetserver.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+
+[root@puppet-server /]# systemctl start puppetserver
+
+[root@puppet-server /]# systemctl status puppetserver
+● puppetserver.service - puppetserver Service
+   Loaded: loaded (/usr/lib/systemd/system/puppetserver.service; disabled; vendor preset: disabled)
+   Active: active (running) since Wed 2017-11-08 08:35:51 UTC; 3s ago
+
+[root@puppet-server /]# alias puppet='/opt/puppetlabs/bin/puppet'
+
+[root@puppet-server /]# puppet --version
+4.10.9
+
+[root@puppet-server /]# puppet cert list -a
++ "puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) 40:A2:79:8D:53:B2:72:6A:F7:82:05:E1:4F:DD:4D:11:B7:DC:41:54:52:F7:90:A5:55:53:61:4A:04:E9:BE:84 (alt names: "DNS:puppet", "DNS:puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net")
+
+[root@puppet-server /]# cat /etc/hosts
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+172.17.0.2      puppet-server
+
+[root@puppet-agent /]# systemctl start puppet
+
++++
+
+Puppet Agent Docker Container creation:
+------------------------------------------
+
+## By default the puppet-server hostname should be puppet.
+
+ec2-user@ubuntu:~$ docker run --privileged -d -h puppet-agent --name puppet-agent --link puppet-server:puppet niladridatta/centos-systemd-httpd
+
+ec2-user@ubuntu:~$ docker exec -it puppet-agent /bin/bash
+
+[root@puppet-agent /]# cat /etc/hosts
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+172.17.0.2      puppet puppet-server puppet-server
+172.17.0.3      puppet-agent
+
+[root@puppet-agent /]# ping puppet
+PING puppet (172.17.0.2) 56(84) bytes of data.
+64 bytes from puppet (172.17.0.2): icmp_seq=1 ttl=64 time=0.106 ms
+64 bytes from puppet (172.17.0.2): icmp_seq=2 ttl=64 time=0.079 ms
+
+[root@puppet-agent /]# yum update -y
+
+[root@puppet-agent /]# sudo rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+
+[root@puppet-agent /]# yum -y install puppet-agent
+
+[root@puppet-agent /]# alias puppet='/opt/puppetlabs/bin/puppet'
+
+[root@puppet-agent /]# puppet --version
+4.10.9
+
+
++++
+
+Open the required Firewall port:
+---------------------------------
+
+[root@puppet-server /]# yum -y install firewalld
+[root@puppet-server /]# systemctl start firewalld.service
+
+[root@puppet-agent /]# firewall-cmd --zone=public --add-port=8140/tcp --permanent
+success
+[root@puppet-agent /]# firewall-cmd --list-ports
+
+[root@puppet-agent /]# firewall-cmd --reload
+success
+[root@puppet-agent /]# firewall-cmd --list-ports
+8140/tcp
+
++++
+
+Certs:
+-------
+
+## puppet-agent reqs cert at starting time.
+
+## Before starting puppet-agent the puppet-server cert status.
+
+[root@puppet-server /]# puppet cert list -a
++ "puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) 40:A2:79:8D:53:B2:72:6A:F7:82:05:E1:4F:DD:4D:11:B7:DC:41:54:52:F7:90:A5:55:53:61:4A:04:E9:BE:84 (alt names: "DNS:puppet", "DNS:puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net")
+
+[root@puppet-agent /]# puppet resource service puppet ensure=running enable=true
+Notice: /Service[puppet]/ensure: ensure changed 'stopped' to 'running'
+service { 'puppet':
+  ensure => 'running',
+  enable => 'true',
+}
+
+[root@puppet-server /]# puppet cert list -a
+  "puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net"  (SHA256) 0D:8F:B2:19:87:E2:85:AD:94:7A:F6:AF:70:CE:C8:56:31:80:61:B6:6F:FB:E3:11:04:BD:F9:65:B2:E4:D1:C7
++ "puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) 40:A2:79:8D:53:B2:72:6A:F7:82:05:E1:4F:DD:4D:11:B7:DC:41:54:52:F7:90:A5:55:53:61:4A:04:E9:BE:84 (alt names: "DNS:puppet", "DNS:puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net")
+
++++
+
+Signing (Notice the + at begining):
+-------------------------------------
+
+[root@puppet-server /]# puppet cert list -a
+  "puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net"  (SHA256) 0D:8F:B2:19:87:E2:85:AD:94:7A:F6:AF:70:CE:C8:56:31:80:61:B6:6F:FB:E3:11:04:BD:F9:65:B2:E4:D1:C7
++ "puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) 40:A2:79:8D:53:B2:72:6A:F7:82:05:E1:4F:DD:4D:11:B7:DC:41:54:52:F7:90:A5:55:53:61:4A:04:E9:BE:84 (alt names: "DNS:puppet", "DNS:puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net")
+
+[root@puppet-server /]# puppet cert sign puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+Signing Certificate Request for:
+  "puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) 0D:8F:B2:19:87:E2:85:AD:94:7A:F6:AF:70:CE:C8:56:31:80:61:B6:6F:FB:E3:11:04:BD:F9:65:B2:E4:D1:C7
+Notice: Signed certificate request for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+Notice: Removing file Puppet::SSL::CertificateRequest puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net at '/etc/puppetlabs/puppet/ssl/ca/requests/puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net.pem'
+
+[root@puppet-server /]# puppet cert list -a
++ "puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net"  (SHA256) 41:70:A3:8E:02:8F:DD:BF:3D:02:19:EC:62:65:A7:A5:2B:04:24:51:92:F1:3D:8A:06:5E:C3:EF:8B:49:3D:65
++ "puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) 40:A2:79:8D:53:B2:72:6A:F7:82:05:E1:4F:DD:4D:11:B7:DC:41:54:52:F7:90:A5:55:53:61:4A:04:E9:BE:84 (alt names: "DNS:puppet", "DNS:puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net")
+
+
++++
+
+Facter:
+----------
+
+[root@puppet-agent /]# alias facter='/opt/puppetlabs/bin/facter'
+
+[root@puppet-agent /]# facter --version
+3.6.8 (commit 25dace2536f6bd339b70b385c7e90e1951870671)
+
+[root@puppet-agent /]# facter | grep hostname
+  /etc/hostname => {
+  hostname => "puppet-agent",
+
+[root@puppet-agent /]# facter | grep fqdn
+  fqdn => "puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net",
+
++++
+
+Puppet Apply:
+---------------
+
+## Executing Main Manifest
+
+[root@puppet-server /]# cat > /etc/puppetlabs/code/environments/production/manifests/site.pp
+file {'/tmp/example-ip':                                            # resource type file and filename
+  ensure  => present,                                               # make sure it exists
+  mode    => '0644',                                                # file permissions
+  content => "Here is my Public IP Address: ${ipaddress_eth0}.\n",  # note the ipaddress_eth0 fact
+}
+
+[root@puppet-agent puppet]# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Caching catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+Info: Applying configuration version '1510138640'
+Notice: /Stage[main]/Main/File[/tmp/example-ip]/ensure: defined content as '{md5}23085026b8d7938892bed70494a17f04'
+Notice: Applied catalog in 0.05 seconds
+
+[root@puppet-agent puppet]# cat /tmp/example-ip
+Here is my Public IP Address: 172.17.0.3.
+
++++
+
+## Executing One-off Manifests
+## The one off manifest is created on agent node
+
+[root@puppet-agent /]# puppet apply /etc/puppet/manifests/site.pp
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.08 seconds
+Notice: /Stage[main]/Main/File[/tmp/etc-ip]/ensure: defined content as '{md5}23085026b8d7938892bed70494a17f04'
+Notice: Applied catalog in 0.04 seconds
+
+[root@puppet-agent /]# cat /tmp/etc-ip
+Here is my Public IP Address: 172.17.0.3.
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
