@@ -208,11 +208,177 @@ Here is my Public IP Address: 172.17.0.3.
 
 +++
 
+Cert Troubleshooting:
+----------------------
+
+## Agent:
+
+[root@puppet-agent-new /]# puppet agent --test
+Error: Could not request certificate: Connection refused - connect(2) for "puppet" port 8140
+Exiting; failed to retrieve certificate and waitforcert is disabled
+
+## Server:
+[root@puppet-server /]# netstat -nap | grep 8140
+
+[root@puppet-server /]# systemctl start puppetserver
+
+[root@puppet-server /]# netstat -nap | grep 8140
+tcp        0      0 0.0.0.0:8140            0.0.0.0:*               LISTEN      673/java
+
+[root@puppet-server /]# puppet cert list -a
++ "puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) 40:A2:79:8D:53:B2:72:6A:F7:82:05:E1:4F:DD:4D:11:B7:DC:41:54:52:F7:90:A5:55:53:61:4A:04:E9:BE:84 (alt names: "DNS:puppet", "DNS:puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net")
+
+## Agent:
+
+[root@puppet-agent-new /]# service puppet restart
+Redirecting to /bin/systemctl restart puppet.service
+
+## Server:
+
+[root@puppet-server /]# puppet cert list -a
+  "puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) ED:BA:24:27:74:DA:FD:6F:9B:F8:56:EA:E8:7B:C4:C0:BB:6D:26:7A:60:9F:4E:F9:A9:AA:FD:6F:70:15:23:1E
++ "puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net"    (SHA256) 40:A2:79:8D:53:B2:72:6A:F7:82:05:E1:4F:DD:4D:11:B7:DC:41:54:52:F7:90:A5:55:53:61:4A:04:E9:BE:84 (alt names: "DNS:puppet", "DNS:puppet-server.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net")
+
+[root@puppet-server /]# puppet cert sign puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+
+[root@puppet-server /]# puppet cert list -a
++ "puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net" (SHA256) E0:62:CD:BC:FC:19:F0:D1:4F:C0:07:6F:A9:65:EE:3D:52:39:CB:E6:69:01:73:1F:08:EC:52:14:51:4D:21:D4
+
+# Main Manifest
+
+[root@puppet-server manifests]# cat /etc/puppetlabs/code/environments/production/manifests/site.pp
+file {'/tmp/example-ip':                                            # resource type file and filename
+  ensure  => present,                                               # make sure it exists
+  mode    => '0644',                                                # file permissions
+  content => "Here is my Public IP Address: ${ipaddress_eth0}.\n",  # note the ipaddress_eth0 fact
+}
+
+## Agent:
+
+[root@puppet-agent-new /]# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Caching catalog for puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+Info: Applying configuration version '1510246853'
+Notice: Applied catalog in 0.03 seconds
+
++++
+
+Modules:
+----------
+
+[root@puppet-server production]# pwd
+/etc/puppetlabs/code/environments/production
+
+[root@puppet-server production]# cat modules/lamp/manifests/init.pp
+class lamp {
+        file {'/tmp/modules-ip':                                            # resource type file and filename
+          ensure  => present,                                               # make sure it exists
+          mode    => '0644',                                                # file permissions
+          content => "Here is my Public IP Address: ${ipaddress_eth0}.\n",  # note the ipaddress_eth0 fact
+        }
+}
+
+## Use Module in Main Manifest
+
+[root@puppet-server production]# cat manifests/site.pp
+node default { }
+
+node 'puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net' {
+        include lamp
+}
 
 
+[root@puppet-agent-new /]# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Caching catalog for puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+Info: Applying configuration version '1510247367'
+Notice: /Stage[main]/Lamp/File[/tmp/modules-ip]/ensure: defined content as '{md5}23085026b8d7938892bed70494a17f04'
+Notice: Applied catalog in 0.08 seconds
+
+[root@puppet-agent-new /]# cat /tmp/modules-ip
+Here is my Public IP Address: 172.17.0.3.
 
 
++++
 
+LAMP:
+------
+
+[root@puppet-server production]# cat > modules/lamp/manifests/init.pp
+class lamp {
+
+        # execute 'yum update'
+        exec { 'yum-update':                    # exec resource named 'yum-update'
+          command => '/usr/bin/yum update'      # command this resource will run
+        }
+
+        # install httpd package
+        package { 'httpd':
+          require => Exec['yum-update'],        # require 'yum-update' before installing
+          ensure => installed,
+        }
+
+        # ensure httpd service is running
+        service { 'httpd':
+          ensure => running,
+        }
+
+        # install mysql-server package                  ## Didn't Work
+        package { 'mysql-server':
+          require => Exec['yum-update'],        # require 'yum-update' before installing
+          ensure => installed,
+        }
+
+        # ensure mysqld service is running              ## Didn't Work
+        service { 'mysqld':
+          require => Package['mysql-server'],
+          ensure => running,
+        }
+
+        # install php package
+        package { 'php':
+          require => Exec['yum-update'],        # require 'yum-update' before installing
+          ensure => installed,
+        }
+
+        # ensure info.php file exists
+        file { '/var/www/html/info.php':
+          ensure => file,
+          content => '<?php  phpinfo(); ?>',    # phpinfo code
+          require => Package['httpd'],          # require 'httpd' package before creating
+        }
+
+}
+
+
+[root@puppet-agent-new /]# yum remove -y php httpd mysql
+
+[root@puppet-agent-new /]# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Caching catalog for puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net
+Info: Applying configuration version '1510248247'
+Notice: /Stage[main]/Lamp/Exec[yum-update]/returns: executed successfully
+Notice: /Stage[main]/Lamp/Package[httpd]/ensure: created
+Notice: /Stage[main]/Lamp/Service[httpd]/ensure: ensure changed 'stopped' to 'running'
+Info: /Stage[main]/Lamp/Service[httpd]: Unscheduling refresh on Service[httpd]
+Notice: /Stage[main]/Lamp/Package[mysql-server]/ensure: created
+Notice: /Stage[main]/Lamp/Service[mysqld]/ensure: ensure changed 'stopped' to 'running'
+Info: /Stage[main]/Lamp/Service[mysqld]: Unscheduling refresh on Service[mysqld]
+Notice: /Stage[main]/Lamp/Package[php]/ensure: created
+Notice: Applied catalog in 21.81 seconds
+
+[root@puppet-agent-new /]# php -v
+PHP 5.4.16 (cli) (built: Nov  6 2016 00:29:02)
+Copyright (c) 1997-2013 The PHP Group
+Zend Engine v2.4.0, Copyright (c) 1998-2013 Zend Technologies
+
++++
 
 
 
