@@ -1,0 +1,228 @@
+MySQL on CentOS:
+-----------------
+
+Uninstall/Erase mysql-community RPM:
+--------------------------------------
+
+[root@puppet-agent ~]# cat /etc/redhat-release
+CentOS Linux release 7.4.1708 (Core)
+
+[root@puppet-agent /]# rpm -qa | grep -i mysql
+mysql-community-release-el7-5.noarch
+mysql-community-common-5.6.38-2.el7.x86_64
+mysql-community-client-5.6.38-2.el7.x86_64
+mysql-community-libs-5.6.38-2.el7.x86_64
+
+[root@puppet-agent /]# rpm -e mysql-community-release  mysql-community-common  mysql-community-client mysql-community-libs
+
+[root@puppet-agent /]# rpm -qa | grep -i mysql
+
+[root@puppet-agent ~]# yum install mysql-server
+Loaded plugins: fastestmirror, ovl
+Loading mirror speeds from cached hostfile
+ * base: centos.excellmedia.net
+ * extras: centos.excellmedia.net
+ * updates: centos.excellmedia.net
+No package mysql-server available.
+Error: Nothing to do
+
++++
+
+Install mysql-community RPM:
+------------------------------
+
+[root@puppet-agent Downloads]# wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
+
+[root@puppet-agent Downloads]# rpm -ivh mysql-community-release-el7-5.noarch.rpm
+
+[root@puppet-agent ~]# yum search mysql-server
+Loaded plugins: fastestmirror, ovl
+Loading mirror speeds from cached hostfile
+ * base: centos.excellmedia.net
+ * extras: centos.excellmedia.net
+ * updates: centos.excellmedia.net
+======================================================================== Matched: mysql-server =========================================================================
+akonadi-mysql.x86_64 : Akonadi MySQL backend support
+
+[root@puppet-agent ~]# yum makecache mysql-server
+
+[root@puppet-agent ~]# yum provides mysql-server
+
+Cleaning yum data:
+--------------------
+
+[root@puppet-agent ~]# yum clean all
+Loaded plugins: fastestmirror, ovl
+Cleaning repos: base extras mysql-connectors-community mysql-tools-community mysql56-community puppetlabs-pc1 updates
+Cleaning up everything
+Maybe you want: rm -rf /var/cache/yum, to also free up space taken by orphaned data from disabled or removed repos
+Cleaning up list of fastest mirrors
+
+[root@puppet-agent ~]# rm -rf /var/cache/yum
+
++++
+
+[root@puppet-agent manifests]# cat mysql.pp
+# execute 'yum update'
+exec { 'yum-update':                    # exec resource named 'yum-update'
+  command => '/usr/bin/yum update'      # command this resource will run
+}
+
+# install mysql-server package                  ## Didn't Work
+package { 'mysql-server':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure mysqld service is running              ## Didn't Work
+service { 'mysqld':
+  require => Package['mysql-server'],
+  ensure => running,
+}
+
+
+[root@puppet-agent manifests]# puppet apply mysql.pp
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.71 seconds
+Notice: /Stage[main]/Main/Exec[yum-update]/returns: executed successfully
+Notice: /Stage[main]/Main/Package[mysql-server]/ensure: created
+Notice: /Stage[main]/Main/Service[mysqld]/ensure: ensure changed 'stopped' to 'running'
+Notice: Applied catalog in 18.54 seconds
+
+[root@puppet-agent manifests]# service mysqld status
+
+[root@puppet-agent manifests]# mysql --version
+mysql  Ver 14.14 Distrib 5.6.38, for Linux (x86_64) using  EditLine wrapper
+
+[root@puppet-agent manifests]# mysql -u root -p
+Enter password: <No Password>
+
+mysql> SELECT User, Host, Password FROM mysql.user;
++------+--------------+----------+
+| User | Host         | Password |
++------+--------------+----------+
+| root | localhost    |          |
+| root | puppet-agent |          |
+| root | 127.0.0.1    |          |
+| root | ::1          |          |
+|      | localhost    |          |
+|      | puppet-agent |          |
++------+--------------+----------+
+6 rows in set (0.00 sec)
+
++++
+
+Basic SQL:
+-----------
+
+[root@puppet-agent /]# mysql -u root
+
+mysql> CREATE DATABASE demodb;
+Query OK, 1 row affected (0.00 sec)
+
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| demodb             |
+| mysql              |
+| performance_schema |
++--------------------+
+4 rows in set (0.00 sec)
+
+
+mysql> CREATE USER 'demouser'@'localhost' IDENTIFIED BY 'demopassword';
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SELECT User, Host, Password FROM mysql.user;
++----------+--------------+-------------------------------------------+
+| User     | Host         | Password                                  |
++----------+--------------+-------------------------------------------+
+| root     | localhost    |                                           |
+| root     | puppet-agent |                                           |
+| root     | 127.0.0.1    |                                           |
+| root     | ::1          |                                           |
+|          | localhost    |                                           |
+|          | puppet-agent |                                           |
+| demouser | localhost    | *0756A562377EDF6ED3AC45A00B356AAE6D3C6BB6 |
++----------+--------------+-------------------------------------------+
+7 rows in set (0.00 sec)
+
+mysql> SELECT User, Host, Password FROM mysql.user where user='demouser';
++----------+-----------+-------------------------------------------+
+| User     | Host      | Password                                  |
++----------+-----------+-------------------------------------------+
+| demouser | localhost | *0756A562377EDF6ED3AC45A00B356AAE6D3C6BB6 |
++----------+-----------+-------------------------------------------+
+1 row in set (0.00 sec)
+
+
+mysql> CREATE USER 'demouser'@'localhost' IDENTIFIED BY 'demopassword';
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SELECT User, Host, Password FROM mysql.user;
++----------+--------------+-------------------------------------------+
+| User     | Host         | Password                                  |
++----------+--------------+-------------------------------------------+
+| root     | localhost    |                                           |
+| root     | puppet-agent |                                           |
+| root     | 127.0.0.1    |                                           |
+| root     | ::1          |                                           |
+|          | localhost    |                                           |
+|          | puppet-agent |                                           |
+| demouser | localhost    | *0756A562377EDF6ED3AC45A00B356AAE6D3C6BB6 |
++----------+--------------+-------------------------------------------+
+7 rows in set (0.00 sec)
+
+mysql> SELECT User, Host, Password FROM mysql.user where user='demouser';
++----------+-----------+-------------------------------------------+
+| User     | Host      | Password                                  |
++----------+-----------+-------------------------------------------+
+| demouser | localhost | *0756A562377EDF6ED3AC45A00B356AAE6D3C6BB6 |
++----------+-----------+-------------------------------------------+
+1 row in set (0.00 sec)
+
+mysql> GRANT ALL PRIVILEGES ON demodb.* to demouser@localhost;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> FLUSH PRIVILEGES;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SHOW GRANTS FOR 'demouser'@'localhost';
++-----------------------------------------------------------------------------------------------------------------+
+| Grants for demouser@localhost                                                                                   |
++-----------------------------------------------------------------------------------------------------------------+
+| GRANT USAGE ON *.* TO 'demouser'@'localhost' IDENTIFIED BY PASSWORD '*0756A562377EDF6ED3AC45A00B356AAE6D3C6BB6' |
+| GRANT ALL PRIVILEGES ON `demodb`.* TO 'demouser'@'localhost'                                                    |
++-----------------------------------------------------------------------------------------------------------------+
+2 rows in set (0.00 sec)
+
+mysql> REVOKE ALL ON *.* FROM demouser@localhost;
+Query OK, 0 rows affected (0.00 sec)
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

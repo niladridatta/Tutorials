@@ -1,0 +1,23 @@
+docker run --privileged -d -h puppet-agent --name puppet-agent --link puppet-server:puppet niladridatta/centos-systemd-httpd
+docker exec -it puppet-agent /bin/bash
+
+cat /etc/hosts
+ping puppet
+
+yum update -y
+
+rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+yum -y install puppet-agent
+
+alias puppet='/opt/puppetlabs/bin/puppet'
+puppet --version
+
+yum -y install firewalld
+systemctl start firewalld.service
+firewall-cmd --zone=public --add-port=8140/tcp --permanent
+firewall-cmd --reload
+firewall-cmd --list-ports
+
+puppet resource service puppet ensure=running enable=true
+
+[root@puppet-server /]# puppet cert list -a

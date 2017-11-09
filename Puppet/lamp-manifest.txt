@@ -1,0 +1,137 @@
+Prequisites:
+==============
+
+## Open firewall port on puppet agent container to communicate with docker host.
+
+[root@puppet-agent-new manifests]# firewall-cmd --zone=public --add-port=80/tcp --permanent
+
+[root@puppet-agent-new manifests]# firewall-cmd --reload
+
+[root@puppet-agent-new manifests]# firewall-cmd --list-ports
+8140/tcp 80/tcp
+
+[root@puppet-agent-new manifests]# cat lamp.php
+# execute 'yum update'
+exec { 'yum-update':                    # exec resource named 'yum-update'
+  command => '/usr/bin/yum update'      # command this resource will run
+}
+
+# install httpd package
+package { 'httpd':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure httpd service is running
+service { 'httpd':
+  ensure => running,
+}
+
+# install mysql-server package                  ## Didn't Work
+package { 'mysql-server':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure mysqld service is running              ## Didn't Work
+service { 'mysqld':
+  require => Package['mysql-server'],
+  ensure => running,
+}
+
+# install php package
+package { 'php':
+  require => Exec['yum-update'],        # require 'yum-update' before installing
+  ensure => installed,
+}
+
+# ensure info.php file exists
+file { '/var/www/html/info.php':
+  ensure => file,
+  content => '<?php  phpinfo(); ?>',    # phpinfo code
+  require => Package['httpd'],          # require 'httpd' package before creating
+}
+
+
+[root@puppet-agent manifests]# puppet apply lamp.pp
+Notice: Compiled catalog for puppet-agent.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.77 seconds
+Notice: /Stage[main]/Main/Exec[yum-update]/returns: executed successfully
+Notice: /Stage[main]/Main/Package[httpd]/ensure: created
+Notice: /Stage[main]/Main/Service[httpd]/ensure: ensure changed 'stopped' to 'running'
+Notice: /Stage[main]/Main/Package[mysql-server]/ensure: created
+Notice: /Stage[main]/Main/Service[mysqld]/ensure: ensure changed 'stopped' to 'running'
+Notice: /Stage[main]/Main/Package[php]/ensure: created
+Notice: Applied catalog in 27.25 seconds
+
++++
+
+[root@puppet-agent-new manifests]# yum remove -y php httpd mysql
+Loaded plugins: fastestmirror, ovl
+No Match for argument: php
+No Match for argument: httpd
+No Match for argument: mysql
+No Packages marked for removal
+
+[root@puppet-agent-new manifests]# puppet apply lamp.php
+Notice: Compiled catalog for puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net in environment production in 0.75 seconds
+Notice: /Stage[main]/Main/Exec[yum-update]/returns: executed successfully
+Notice: /Stage[main]/Main/Package[httpd]/ensure: created
+Notice: /Stage[main]/Main/Service[httpd]/ensure: ensure changed 'stopped' to 'running'
+Notice: /Stage[main]/Main/Package[mysql-server]/ensure: created
+Notice: /Stage[main]/Main/Service[mysqld]/ensure: ensure changed 'stopped' to 'running'
+Notice: /Stage[main]/Main/Package[php]/ensure: created
+Notice: Applied catalog in 72.67 seconds
+
+
+[root@puppet-agent-new manifests]# service httpd status
+Redirecting to /bin/systemctl status httpd.service
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor preset: disabled)
+   Active: active (running) since Thu 2017-11-09 15:25:44 UTC; 3min 46s ago
+
+[root@puppet-agent-new manifests]# service mysqld status
+Redirecting to /bin/systemctl status mysqld.service
+● mysqld.service - MySQL Community Server
+   Loaded: loaded (/usr/lib/systemd/system/mysqld.service; enabled; vendor preset: disabled)
+   Active: active (running) since Thu 2017-11-09 15:26:39 UTC; 3min 47s ago
+
+[root@puppet-agent-new manifests]# httpd -v
+Server version: Apache/2.4.6 (CentOS)
+Server built:   Oct 19 2017 20:39:16
+
+[root@puppet-agent-new manifests]# mysql --version
+mysql  Ver 14.14 Distrib 5.6.38, for Linux (x86_64) using  EditLine wrapper
+
+[root@puppet-agent-new manifests]# php --version
+PHP 5.4.16 (cli) (built: Nov  6 2016 00:29:02)
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
