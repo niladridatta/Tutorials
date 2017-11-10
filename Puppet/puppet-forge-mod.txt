@@ -1,0 +1,271 @@
+LAMP with Pre-existing Modules
+================================
+
+[root@puppet-server /]# ls /etc/puppetlabs/puppet/
+auth.conf  hiera.yaml  puppet.conf  ssl
+
+[root@puppet-server /]# puppet module install puppetlabs-apache
+Notice: Preparing to install into /etc/puppetlabs/code/environments/production/modules ...
+Notice: Downloading from https://forgeapi.puppet.com ...
+Notice: Installing -- do not interrupt ...
+/etc/puppetlabs/code/environments/production/modules
+└─┬ puppetlabs-apache (v2.3.0)
+  ├── puppetlabs-concat (v4.1.0)
+  └── puppetlabs-stdlib (v4.21.0)
+
+  
+[root@puppet-server /]# ls /etc/puppetlabs/code/environments/production/modules
+apache  concat  lamp  stdlib
+
+[root@puppet-server /]# puppet module install puppetlabs-mysql
+
+[root@puppet-server /]# ls /etc/puppetlabs/code/environments/production/modules
+apache  concat  lamp  mysql  staging  stdlib  translate
+
+## Edit the Main Manifest.
+
+[root@puppet-server manifests]# pwd
+/etc/puppetlabs/code/environments/production/manifests
+
+[root@puppet-server manifests]# cat site.pp
+node default { }
+
+node 'puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net' {
+
+  class { 'apache':                # use the "apache" module
+    default_vhost => false,        # don't use the default vhost
+    default_mods => false,         # don't load default mods
+    mpm_module => 'prefork',        # use the "prefork" mpm_module
+  }
+
+  include apache::mod::php        # include mod php
+
+  apache::vhost { 'example.com':  # create a vhost called "example.com"
+    port    => '80',               # use port 80
+    docroot => '/var/www/html',     # set the docroot to the /var/www/html
+  }
+
+}
+
+[root@puppet-agent-new modules]# yum remove -y php httpd mysql
+
+[root@puppet-agent-new modules]# service httpd status
+Redirecting to /bin/systemctl status httpd.service
+Unit httpd.service could not be found.
+
+[root@puppet-agent-new modules]# puppet agent --test
+
+[root@puppet-agent-new modules]# service httpd status
+Redirecting to /bin/systemctl status httpd.service
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Fri 2017-11-10 16:45:28 UTC; 21s ago
+
+[root@puppet-agent-new modules]# curl example.com
+
+[root@puppet-agent-new modules]# lynx -dump localhost
+  Hello World, from puppet-agent
+
+[root@puppet-agent-new modules]# cat /var/www/html/index.html
+<html>
+<h3>Hello World, from puppet-agent</h3>
+</html>
+
+[root@puppet-agent-new modules]# php -v
+PHP 5.4.16 (cli) (built: Nov  6 2016 00:29:02)
+Copyright (c) 1997-2013 The PHP Group
+Zend Engine v2.4.0, Copyright (c) 1998-2013 Zend Technologies
+
++++
+
+[root@puppet-server manifests]# cat site.pp
+node default { }
+
+node 'puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net' {
+
+  class { 'apache':                # use the "apache" module
+    default_vhost => false,        # don't use the default vhost
+    default_mods => false,         # don't load default mods
+    mpm_module => 'prefork',        # use the "prefork" mpm_module
+  }
+
+  include apache::mod::php        # include mod php
+
+  apache::vhost { 'example.com':  # create a vhost called "example.com"
+    port    => '80',               # use port 80
+    docroot => '/var/www/html',     # set the docroot to the /var/www/html
+  }
+
+  file { 'info.php':                                # file resource name
+    path => '/var/www/html/info.php',               # destination path
+    ensure => file,
+    require => Class['apache'],                     # require apache class be used
+    source => 'puppet:///modules/apache/info.php',  # specify location of file to be copied
+  }
+
+}
+
+[root@puppet-server manifests]# cat ../modules/apache/files/info.php
+<?php  phpinfo(); ?>
+
+
+[root@puppet-agent-new modules]# ll /var/www/html/info.php
+ls: cannot access /var/www/html/info.php: No such file or directory
+
+[root@puppet-agent-new modules]# puppet agent --test
+Notice: /Stage[main]/Main/Node[puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net]/File[info.php]/ensure: defined content as '{md5}29b235d4b1a3c4d4cdda2b9c1d051187'
+
+[root@puppet-agent-new modules]# ll /var/www/html/info.php
+-rw-r--r-- 1 root root 22 Nov 10 16:58 /var/www/html/info.php
+
++++
+
+Testing from Main Server (Host machine running Docker containers:
+------------------------------------------------------------------
+
+## Check info.php
+
+ec2-user@ubuntu:~$ docker ps -a
+CONTAINER ID        IMAGE                               COMMAND             CREATED             STATUS              PORTS                  NAMES
+b858e3efe1ae        niladridatta/centos-systemd-httpd   "/usr/sbin/init"    31 hours ago        Up About an hour    0.0.0.0:8080->80/tcp   puppet-agent-new
+
+ec2-user@ubuntu:~$ curl localhost:8080
+<html>
+<h3>Hello World, from puppet-agent</h3>
+</html>
+
+ec2-user@ubuntu:~$ lynx -dump localhost:8080
+  Hello World, from puppet-agent
+
+ec2-user@ubuntu:~$ lynx -dump localhost:8080/info.php | grep Version
+PHP Version 5.4.16
+Apache Version Apache/2.4.6 (CentOS)
+
+
+## Check VHost
+
+[root@puppet-agent-new modules]# hostname -i
+172.17.0.3
+
+ec2-user@ubuntu:~$ lynx -dump 172.17.0.3:80
+  Hello World, from puppet-agent
+
+ec2-user@ubuntu:~$ lynx -dump 172.17.0.3:80/info.php | grep 'PHP Version'
+PHP Version 5.4.16
+
+[root@puppet-agent-new modules]# httpd -S
+VirtualHost configuration:
+*:80                   example.com (/etc/httpd/conf.d/25-example.com.conf:6)
+ServerRoot: "/etc/httpd"
+Main DocumentRoot: "/etc/httpd/htdocs"
+Main ErrorLog: "/var/log/httpd/error_log"
+Mutex mpm-accept: using_defaults
+Mutex default: dir="/run/httpd/" mechanism=default
+PidFile: "/etc/httpd/run/httpd.pid"
+Define: _RH_HAS_HTTPPROTOCOLOPTIONS
+Define: DUMP_VHOSTS
+Define: DUMP_RUN_CFG
+User: name="apache" id=48
+Group: name="apache" id=48
+
+## Update the main Manifest on puppet server as
+
+  apache::vhost { 'example.com':  # create a vhost called "example.com"
+    port    => '80',               # use port 80
+    docroot => '/var/www/html',     # set the docroot to the /var/www/html
+  }
+
+  apache::vhost { 'test.com':  # create a vhost called "example.com"
+    port    => '80',               # use port 80
+    docroot => '/var/www/test-html',     # set the docroot to the /var/www/html
+  }
+
+## On the agent create dir for example.com and test.com
+
+[root@puppet-agent-new modules]# cat /var/www/html/index.html
+<html>
+<h3>Hello World, from puppet-agent [ example.com ] </h3>
+</html>
+
+[root@puppet-agent-new modules]# cat /var/www/test-html/index.html
+<html>
+<h3>Hello World, from puppet-agent [ test.com ] </h3>
+</html>
+
+
+## Force manifest run on agent
+
+[root@puppet-agent-new modules]# puppet agent --test
+Notice: /Stage[main]/Main/Node[puppet-agent-new.mmadkqjneh1edj3srsbdkkvpgc.tx.internal.cloudapp.net]/Apache::Vhost[test.com]/Concat[25-test.com.conf]/File[/etc/httpd/conf.d/25-test.com.conf]/ensure: defined content as '{md5}487907ddcef783451557f342b9bcb3fb'
+
+[root@puppet-agent-new modules]# lynx -dump test.com
+  Hello World, from puppet-agent [ test.com ]
+
+
+[root@puppet-agent-new modules]# lynx -dump example.com
+  Hello World, from puppet-agent [ example.com ]
+
+
+## On the Host/Main Machine
+
+root@ubuntu:~# cat /etc/hosts | tail -2
+172.17.0.3      example.com
+172.17.0.3      test.com
+
+root@ubuntu:~# lynx -dump example.com
+  Hello World, from puppet-agent [ example.com ]
+
+
+root@ubuntu:~# lynx -dump test.com
+  Hello World, from puppet-agent [ test.com ]
+
+
++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
